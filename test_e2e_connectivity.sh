@@ -38,8 +38,8 @@ echo ""
 
 # Test 3: UI has correct API configuration
 echo "Test 3: UI API Configuration"
-echo "Testing: env-config.html contains correct backend URL"
-ENV_CONFIG=$(curl -s ${UI_URL}/env-config.html)
+echo "Testing: env-config.js contains correct backend URL"
+ENV_CONFIG=$(curl -s ${UI_URL}/env-config.js)
 if echo "$ENV_CONFIG" | grep -q "http://35.224.3.54"; then
     echo "✓ UI configured with correct backend URL"
 else

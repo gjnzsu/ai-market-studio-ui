@@ -5,7 +5,7 @@ RUN apk add --no-cache gettext
 
 # Copy frontend files
 COPY index.html /usr/share/nginx/html/
-COPY env-config.html /usr/share/nginx/html/
+COPY env-config.js /usr/share/nginx/html/
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
