@@ -1,0 +1,26 @@
+{
+  "name": "ai-market-studio-ui",
+  "version": "1.0.0",
+  "description": "Frontend for AI Market Studio - Conversational FX Market Data Platform",
+  "scripts": {
+    "dev": "python -m http.server 8080",
+    "build": "echo 'No build step required for static HTML'",
+    "docker:build": "docker build -t ai-market-studio-ui .",
+    "docker:run": "docker run -p 8080:80 -e API_BASE_URL=http://localhost:8000 ai-market-studio-ui",
+    "k8s:deploy": "kubectl apply -f k8s/",
+    "k8s:delete": "kubectl delete -f k8s/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gjnzsu/ai-market-studio-ui.git"
+  },
+  "keywords": [
+    "fx",
+    "market-data",
+    "ai",
+    "chatbot",
+    "frontend"
+  ],
+  "author": "",
+  "license": "MIT"
+}

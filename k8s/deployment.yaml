@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-market-studio-ui
+  labels:
+    app: ai-market-studio-ui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-market-studio-ui
+  template:
+    metadata:
+      labels:
+        app: ai-market-studio-ui
+    spec:
+      containers:
+      - name: ai-market-studio-ui
+        image: gcr.io/YOUR_PROJECT_ID/ai-market-studio-ui:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: ai-market-studio-ui-config
+              key: API_BASE_URL
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
