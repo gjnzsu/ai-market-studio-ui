@@ -513,7 +513,9 @@
         } else if (data.data && data.data.type === 'insight') {
           renderInlineInsight(assistantBubble, data.data);
         } else if (data.data && data.data.type === 'rag') {
-          const sourcesHtml = data.data.sources.map(s => `<li>${s.name || s}</li>`).join('');
+          // Deduplicate sources by name
+          const uniqueSources = [...new Set(data.data.sources.map(s => s.name || s))];
+          const sourcesHtml = uniqueSources.map(s => `<li>${s}</li>`).join('');
           const sourcesDiv = document.createElement('div');
           sourcesDiv.className = 'rag-sources';
           sourcesDiv.innerHTML = `Sources:<ul>${sourcesHtml}</ul>`;
