@@ -212,6 +212,20 @@
     }
     #send-btn:hover { background: #4338ca; }
     #send-btn:disabled { background: #2d3148; color: #64748b; cursor: not-allowed; }
+    .export-btn {
+      align-self: flex-end;
+      margin-top: 4px;
+      background: #1e2235;
+      color: #94a3b8;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .export-btn:hover { border-color: #4f46e5; color: #a5b4fc; }
+    .export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .examples {
       padding: 0.5rem 1.5rem 0;
       display: flex;
@@ -345,6 +359,10 @@
   const userInput  = document.getElementById('user-input');
   const sendBtn    = document.getElementById('send-btn');
   const history    = [];
+  // Last successful assistant response data (used for PDF export)
+  let lastReply = '';
+  let lastData  = null;
+  let lastToolUsed = null;
 
   sendBtn.addEventListener('click', sendMessage);
   userInput.addEventListener('keydown', e => {
@@ -481,6 +499,34 @@
     return div;
   }
 
+  async function exportToPdf(btn) {
+    if (!lastReply && !lastData) return;
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/export/pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: lastReply, data: lastData, tool_used: lastToolUsed }),
+      });
+      if (!res.ok) throw new Error(res.statusText);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fx-insight-${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('PDF export failed: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Export to PDF';
+    }
+  }
+
   async function sendMessage() {
     const msg = userInput.value.trim();
     if (!msg) return;
@@ -505,7 +551,18 @@
         const data = await res.json();
         history.push({ role: 'user',      content: msg });
         history.push({ role: 'assistant', content: data.reply });
+        lastReply = data.reply;
+        lastData  = data.data;
+        lastToolUsed = data.tool_used;
         const assistantBubble = addBubble('assistant', data.reply, data.data);
+        // Add Export to PDF button when structured data is present
+        if (data.data && ['dashboard', 'news', 'insight', 'rag'].includes(data.data.type)) {
+          const btn = document.createElement('button');
+          btn.className = 'export-btn';
+          btn.textContent = 'Export to PDF';
+          btn.addEventListener('click', () => exportToPdf(btn));
+          assistantBubble.appendChild(btn);
+        }
         if (data.data && data.data.type === 'dashboard') {
           renderInlineDashboard(assistantBubble, data.data);
         } else if (data.data && data.data.type === 'news') {
