@@ -1,6 +1,39 @@
 # AI Market Studio - Frontend
 
-Frontend application for the AI Market Studio conversational FX market data platform.
+Frontend application for the AI Market Studio conversational FX market data platform with **multi-agent architecture visualization**.
+
+## Features
+
+### 🤖 Multi-Agent Architecture Visualization
+
+The UI now includes an **Agent Activity Panel** that shows real-time status of the 4 specialized sub-agents:
+
+- **Data Collector** 🔵 - Fetches FX rates, news, economic data
+- **Market Analyst** 🔵 - Analyzes trends, volatility, signals
+- **Report Generator** 🔵 - Creates PDFs, dashboards, summaries
+- **Research Synthesizer** 🔵 - Combines multi-source intelligence
+
+**Status Indicators:**
+- 🔵 Working (agent currently executing)
+- 🟢 Complete (agent finished successfully)
+- ⚪ Idle (agent not involved in current request)
+- 🔴 Error (agent encountered an error)
+
+The panel is collapsible and updates automatically based on which agents the orchestrator calls.
+
+### 💬 Conversational Interface
+
+- Natural language queries for FX rates, trends, and market insights
+- Pre-defined query chips for common requests
+- Inline visualizations (line charts, bar charts)
+- Export to PDF functionality
+
+### 📊 Data Visualization
+
+- Chart.js-powered inline dashboards
+- Historical trend analysis
+- Multi-currency comparisons
+- News cards with source attribution
 
 ## Architecture
 
