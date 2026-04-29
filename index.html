@@ -43,114 +43,6 @@
     /* ---- Views ---- */
     #app { flex: 1; overflow: hidden; display: flex; flex-direction: row; }
     #chat-view { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-    /* ---- Agent Activity Panel ---- */
-    #agent-panel {
-      width: 280px;
-      background: #1a1d27;
-      border-left: 1px solid #2d3148;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transition: width 0.3s ease;
-    }
-    #agent-panel.collapsed {
-      width: 0;
-      border-left: none;
-    }
-    #agent-panel-header {
-      padding: 1rem 1.25rem;
-      border-bottom: 1px solid #2d3148;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    #agent-panel-header h2 {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #a5b4fc;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    #toggle-panel-btn {
-      background: none;
-      border: none;
-      color: #64748b;
-      cursor: pointer;
-      font-size: 1.1rem;
-      padding: 0.25rem;
-      transition: color 0.15s;
-    }
-    #toggle-panel-btn:hover { color: #a5b4fc; }
-    #agent-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-    .agent-card {
-      background: #1e2235;
-      border: 1px solid #2d3148;
-      border-radius: 8px;
-      padding: 0.75rem;
-      display: flex;
-      align-items: flex-start;
-      gap: 0.75rem;
-      transition: border-color 0.15s;
-    }
-    .agent-card.active { border-color: #4f46e5; }
-    .agent-card.complete { border-color: #34d399; }
-    .agent-card.error { border-color: #f87171; }
-    .agent-status {
-      font-size: 1.25rem;
-      line-height: 1;
-      flex-shrink: 0;
-    }
-    .agent-info {
-      flex: 1;
-      min-width: 0;
-    }
-    .agent-name {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #e2e8f0;
-      margin-bottom: 0.25rem;
-    }
-    .agent-desc {
-      font-size: 0.7rem;
-      color: #64748b;
-      line-height: 1.4;
-    }
-    .agent-card.active .agent-status { animation: pulse 1.5s ease-in-out infinite; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    #expand-panel-btn {
-      position: fixed;
-      right: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      background: #1e2235;
-      border: 1px solid #2d3148;
-      border-radius: 8px 0 0 8px;
-      padding: 0.75rem 0.5rem;
-      color: #64748b;
-      cursor: pointer;
-      font-size: 1.1rem;
-      transition: all 0.15s;
-      z-index: 10;
-      display: none;
-    }
-    #expand-panel-btn:hover {
-      background: #4f46e5;
-      color: #fff;
-      border-color: #4f46e5;
-    }
-    #agent-panel.collapsed ~ #expand-panel-btn {
-      display: block;
-    }
     /* ---- Chat View ---- */
     #chat-window {
       flex: 1;
@@ -381,47 +273,6 @@
         <button id="send-btn">Send</button>
       </div>
     </section>
-
-    <!-- ===== AGENT ACTIVITY PANEL ===== -->
-    <aside id="agent-panel">
-      <div id="agent-panel-header">
-        <h2>Agent Activity</h2>
-        <button id="toggle-panel-btn" onclick="toggleAgentPanel()" title="Collapse panel">◀</button>
-      </div>
-      <div id="agent-list">
-        <div class="agent-card" data-agent="data_collector">
-          <div class="agent-status">⚪</div>
-          <div class="agent-info">
-            <div class="agent-name">Data Collector</div>
-            <div class="agent-desc">Fetches FX rates, news, economic data</div>
-          </div>
-        </div>
-        <div class="agent-card" data-agent="market_analyst">
-          <div class="agent-status">⚪</div>
-          <div class="agent-info">
-            <div class="agent-name">Market Analyst</div>
-            <div class="agent-desc">Analyzes trends, volatility, signals</div>
-          </div>
-        </div>
-        <div class="agent-card" data-agent="report_generator">
-          <div class="agent-status">⚪</div>
-          <div class="agent-info">
-            <div class="agent-name">Report Generator</div>
-            <div class="agent-desc">Creates PDFs, dashboards, summaries</div>
-          </div>
-        </div>
-        <div class="agent-card" data-agent="research_synthesizer">
-          <div class="agent-status">⚪</div>
-          <div class="agent-info">
-            <div class="agent-name">Research Synthesizer</div>
-            <div class="agent-desc">Combines multi-source intelligence</div>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Expand button (shown when panel is collapsed) -->
-    <button id="expand-panel-btn" onclick="toggleAgentPanel()" title="Show agent activity">▶</button>
   </div>
 
 <script>
@@ -675,76 +526,6 @@
     }
   }
 
-  // ── Agent Activity Panel ────────────────────────────────────────────────
-  function toggleAgentPanel() {
-    const panel = document.getElementById('agent-panel');
-    const toggleBtn = document.getElementById('toggle-panel-btn');
-    panel.classList.toggle('collapsed');
-    toggleBtn.textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
-    toggleBtn.title = panel.classList.contains('collapsed') ? 'Show agent activity' : 'Collapse panel';
-  }
-
-  function resetAgentStatus() {
-    document.querySelectorAll('.agent-card').forEach(card => {
-      card.classList.remove('active', 'complete', 'error');
-      card.querySelector('.agent-status').textContent = '⚪';
-    });
-  }
-
-  function updateAgentStatus(agentName, status) {
-    const card = document.querySelector(`.agent-card[data-agent="${agentName}"]`);
-    if (!card) return;
-
-    card.classList.remove('active', 'complete', 'error');
-    const statusIcon = card.querySelector('.agent-status');
-
-    if (status === 'working') {
-      card.classList.add('active');
-      statusIcon.textContent = '🔵';
-    } else if (status === 'complete') {
-      card.classList.add('complete');
-      statusIcon.textContent = '🟢';
-    } else if (status === 'error') {
-      card.classList.add('error');
-      statusIcon.textContent = '🔴';
-    } else {
-      statusIcon.textContent = '⚪';
-    }
-  }
-
-  function detectAgentsFromToolUsed(toolUsed) {
-    // Map tool names to agent names
-    const toolToAgent = {
-      'collect_market_data': 'data_collector',
-      'analyze_market_trends': 'market_analyst',
-      'generate_report': 'report_generator',
-      'synthesize_research': 'research_synthesizer'
-    };
-
-    if (toolUsed && toolToAgent[toolUsed]) {
-      return [toolToAgent[toolUsed]];
-    }
-
-    // Fallback: detect from reply content (legacy tools)
-    const agents = [];
-    if (toolUsed === 'get_exchange_rate' || toolUsed === 'get_exchange_rates' ||
-        toolUsed === 'get_historical_rates' || toolUsed === 'get_fx_news' ||
-        toolUsed === 'get_interest_rate') {
-      agents.push('data_collector');
-    }
-    if (toolUsed === 'generate_dashboard') {
-      agents.push('report_generator');
-    }
-    if (toolUsed === 'generate_market_insight') {
-      agents.push('data_collector', 'market_analyst', 'research_synthesizer');
-    }
-    if (toolUsed === 'get_internal_research') {
-      agents.push('data_collector');
-    }
-
-    return agents.length > 0 ? agents : ['data_collector']; // Default to data collector
-  }
-
   async function sendMessage() {
     const msg = userInput.value.trim();
     if (!msg) return;
@@ -754,9 +535,6 @@
 
     addBubble('user', msg);
     const thinking = addBubble('thinking', 'Fetching data…');
-
-    // Reset agent status at start of new request
-    resetAgentStatus();
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
@@ -775,10 +553,6 @@
         lastReply = data.reply;
         lastData  = data.data;
         lastToolUsed = data.tool_used;
-
-        // Update agent status based on tools used
-        const agentsUsed = detectAgentsFromToolUsed(data.tool_used);
-        agentsUsed.forEach(agent => updateAgentStatus(agent, 'complete'));
 
         const assistantBubble = addBubble('assistant', data.reply, data.data);
         // Add Export to PDF button when structured data is present
