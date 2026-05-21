@@ -265,6 +265,9 @@
         <span class="ex-chip" onclick="sendExample(this)">What is the current Federal Funds Rate?</span>
         <span class="ex-chip" onclick="sendExample(this)">List out available FX research reports</span>
         <span class="ex-chip" onclick="sendExample(this)">Give me a market insight on EUR/USD and GBP/USD</span>
+        <span class="ex-chip" data-agent-mode="workflow" data-prompt="Collect market context for EUR/USD and GBP/USD. Include spot rates, latest FX news, FRED DFF, and research context. Do not analyze or summarize yet." onclick="sendExample(this)">Workflow: collect context</span>
+        <span class="ex-chip" data-agent-mode="workflow" data-prompt="Analyze the market context for EUR/USD and GBP/USD. Focus on trend and volatility only. Do not generate a full market briefing." onclick="sendExample(this)">Workflow: analyze context</span>
+        <span class="ex-chip" data-agent-mode="workflow" data-prompt="Generate a market briefing for EUR/USD and GBP/USD. Include rates, latest FX news, FRED DFF, and research context. Explain the key market drivers and risks." onclick="sendExample(this)">Workflow: market briefing</span>
       </div>
       <div id="chat-window"></div>
       <div id="input-area">
@@ -362,7 +365,7 @@
   let lastData  = null;
   let lastToolUsed = null;
 
-  sendBtn.addEventListener('click', sendMessage);
+  sendBtn.addEventListener('click', () => sendMessage());
   userInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
@@ -480,7 +483,10 @@
     if (rates.length > 0 || news.length > 0) bubble.appendChild(block);
   }
 
-  function sendExample(el) { userInput.value = el.textContent; sendMessage(); }
+  function sendExample(el) {
+    userInput.value = el.dataset.prompt || el.textContent;
+    sendMessage(el.dataset.agentMode);
+  }
 
   function addBubble(role, text, data) {
     const div = document.createElement('div');
@@ -525,7 +531,7 @@
     }
   }
 
-  async function sendMessage() {
+  async function sendMessage(agentMode) {
     const msg = userInput.value.trim();
     if (!msg) return;
     userInput.value = '';
@@ -536,10 +542,13 @@
     const thinking = addBubble('thinking', 'Fetching data…');
 
     try {
+      const payload = { message: msg, history };
+      if (agentMode) payload.agent_mode = agentMode;
+
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, history }),
+        body: JSON.stringify(payload),
       });
       chatWindow.removeChild(thinking);
       if (!res.ok) {
