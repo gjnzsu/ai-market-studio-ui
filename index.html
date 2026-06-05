@@ -212,6 +212,11 @@
       border-color: #1d4ed8;
       background: #111c33;
     }
+    .briefing-chip.synthetic {
+      color: #ddd6fe;
+      border-color: #7c3aed;
+      background: #1f1635;
+    }
     .briefing-chip.missing {
       color: #fcd34d;
       border-color: #92400e;
@@ -598,6 +603,14 @@
     return list;
   }
 
+  function addMetricChip(row, label, value, className) {
+    if (value === undefined || value === null || value === '') return;
+    const chip = document.createElement('span');
+    chip.className = className || 'briefing-chip';
+    chip.textContent = `${label}: ${value}`;
+    row.appendChild(chip);
+  }
+
   function renderInlineMarketBriefing(bubble, payload) {
     const block = document.createElement('div');
     block.className = 'briefing-block';
@@ -608,6 +621,8 @@
     const context = workflowContext.context || {};
     const dataGaps = asArray(payload.data_gaps);
     const warnings = asArray(payload.warnings).concat(asArray(workflowContext.warnings));
+    const specialistData = payload.specialist_data || {};
+    const carryMetrics = payload.carry_metrics || {};
 
     const header = document.createElement('div');
     header.className = 'briefing-header';
@@ -630,6 +645,12 @@
       badge.textContent = playbook.name;
       badges.appendChild(badge);
     }
+    if (specialistData.source === 'synthetic' || carryMetrics.source === 'synthetic') {
+      const badge = document.createElement('span');
+      badge.className = 'briefing-chip synthetic';
+      badge.textContent = 'synthetic specialist data';
+      badges.appendChild(badge);
+    }
     if (badges.children.length > 0) header.appendChild(badges);
     block.appendChild(header);
 
@@ -639,6 +660,12 @@
       const chip = document.createElement('span');
       chip.className = 'briefing-chip available';
       chip.textContent = `available: ${sourceLabel(source)}`;
+      sourceChips.appendChild(chip);
+    });
+    asArray(grounding.synthetic_sources).forEach(source => {
+      const chip = document.createElement('span');
+      chip.className = 'briefing-chip synthetic';
+      chip.textContent = `synthetic: ${sourceLabel(source)}`;
       sourceChips.appendChild(chip);
     });
     asArray(grounding.missing_optional_sources).forEach(source => {
@@ -694,6 +721,30 @@
       });
       addBriefingSection(block, 'FRED', fredChips);
     }
+
+    const metricChips = document.createElement('div');
+    metricChips.className = 'briefing-chips';
+    addMetricChip(metricChips, 'rate differential proxy', carryMetrics.rate_differential_proxy, 'briefing-chip synthetic');
+    addMetricChip(metricChips, 'forward bias', carryMetrics.forward_premium_discount, 'briefing-chip synthetic');
+    addMetricChip(metricChips, '6M points', carryMetrics.six_month_forward_points, 'briefing-chip synthetic');
+    addMetricChip(metricChips, 'carry-to-vol', carryMetrics.carry_to_vol, 'briefing-chip synthetic');
+    if (carryMetrics.interpretation) {
+      addMetricChip(metricChips, 'view', carryMetrics.interpretation, 'briefing-chip');
+    }
+    addBriefingSection(block, 'Carry metrics', metricChips.children.length > 0 ? metricChips : null);
+
+    const syntheticRows = [];
+    asArray(specialistData.forward_curve && specialistData.forward_curve.tenors).forEach(tenor => {
+      const rate = tenor.forward_rate !== undefined ? `rate ${tenor.forward_rate}` : '';
+      const points = tenor.forward_points !== undefined ? `${tenor.forward_points} pts` : '';
+      syntheticRows.push(`Forward ${tenor.tenor}: ${[rate, points].filter(Boolean).join(', ')}`);
+    });
+    asArray(specialistData.implied_volatility && specialistData.implied_volatility.tenors).forEach(tenor => {
+      const vol = tenor.atm_vol !== undefined ? `${tenor.atm_vol}% ATM vol` : '';
+      syntheticRows.push(`Vol ${tenor.tenor}: ${vol}`);
+    });
+    if (specialistData.provenance) syntheticRows.push(specialistData.provenance);
+    addBriefingSection(block, 'Synthetic assumptions', makeBriefingList(syntheticRows));
 
     const news = asArray(context.news).slice(0, 3);
     addBriefingSection(block, 'News', makeBriefingList(news, item => {

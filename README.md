@@ -25,8 +25,20 @@ The panel is collapsible and updates automatically based on which agents the orc
 
 - Natural language queries for FX rates, trends, and market insights
 - Pre-defined query chips for common requests
+- Workflow-mode market briefing chips, including FX carry playbook examples
 - Inline visualizations (line charts, bar charts)
 - Export to PDF functionality
+
+### Workflow Market Briefings
+
+The chat UI renders backend `market_briefing` responses as structured briefing panels instead of raw JSON. FX carry playbook responses show:
+
+- selected playbook and research-only stance
+- connector-backed and synthetic source grounding
+- spot rates, FRED data, news, and research sources when present
+- synthetic specialist assumptions for forward curve and implied volatility
+- lightweight carry metrics such as rate differential proxy and carry-to-vol
+- data gaps and warnings when inputs are unavailable
 
 ### 📊 Data Visualization
 
