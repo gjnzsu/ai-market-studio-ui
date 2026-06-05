@@ -162,6 +162,87 @@
       font-weight: 400;
       margin-right: 4px;
     }
+    .briefing-block {
+      margin-top: 10px;
+      padding: 10px;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.82rem;
+    }
+    .briefing-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .briefing-title {
+      color: #e2e8f0;
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+    .briefing-badges,
+    .briefing-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .briefing-badge,
+    .briefing-chip {
+      border-radius: 6px;
+      padding: 4px 8px;
+      border: 1px solid #2d3148;
+      background: #151926;
+      color: #cbd5e1;
+      font-size: 0.74rem;
+      line-height: 1.2;
+    }
+    .briefing-badge {
+      color: #a7f3d0;
+      border-color: #166534;
+      background: #10251d;
+      font-weight: 600;
+    }
+    .briefing-chip.available {
+      color: #bfdbfe;
+      border-color: #1d4ed8;
+      background: #111c33;
+    }
+    .briefing-chip.missing {
+      color: #fcd34d;
+      border-color: #92400e;
+      background: #241a0d;
+    }
+    .briefing-chip.required {
+      color: #fecaca;
+      border-color: #991b1b;
+      background: #2a1115;
+    }
+    .briefing-section {
+      border-top: 1px solid #202437;
+      padding-top: 9px;
+    }
+    .briefing-section-title {
+      color: #94a3b8;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .briefing-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #cbd5e1;
+    }
+    .briefing-list li {
+      margin: 4px 0;
+      line-height: 1.35;
+    }
     .rag-sources {
       margin-top: 8px;
       padding: 8px;
@@ -268,6 +349,7 @@
         <span class="ex-chip" data-agent-mode="workflow" data-prompt="Collect market context for EUR/USD and GBP/USD. Include spot rates, latest FX news, FRED DFF, and research context. Do not analyze or summarize yet." onclick="sendExample(this)">Workflow: collect context</span>
         <span class="ex-chip" data-agent-mode="workflow" data-prompt="Analyze the market context for EUR/USD and GBP/USD. Focus on trend and volatility only. Do not generate a full market briefing." onclick="sendExample(this)">Workflow: analyze context</span>
         <span class="ex-chip" data-agent-mode="workflow" data-prompt="Generate a market briefing for EUR/USD and GBP/USD. Include rates, latest FX news, FRED DFF, and research context. Explain the key market drivers and risks." onclick="sendExample(this)">Workflow: market briefing</span>
+        <span class="ex-chip" data-agent-mode="workflow" data-prompt="Use the financial analysis playbook for an FX carry briefing on EUR/USD. Include FRED macro rate data, explain the carry setup using spot and rate differentials, and keep it research-only." onclick="sendExample(this)">Workflow: FX carry playbook</span>
       </div>
       <div id="chat-window"></div>
       <div id="input-area">
@@ -483,6 +565,164 @@
     if (rates.length > 0 || news.length > 0) bubble.appendChild(block);
   }
 
+  function asArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function sourceLabel(value) {
+    return String(value || '').replace(/_/g, ' ');
+  }
+
+  function addBriefingSection(block, title, child) {
+    if (!child) return;
+    const section = document.createElement('div');
+    section.className = 'briefing-section';
+    const heading = document.createElement('div');
+    heading.className = 'briefing-section-title';
+    heading.textContent = title;
+    section.appendChild(heading);
+    section.appendChild(child);
+    block.appendChild(section);
+  }
+
+  function makeBriefingList(items, formatter) {
+    const filtered = asArray(items).filter(Boolean);
+    if (filtered.length === 0) return null;
+    const list = document.createElement('ul');
+    list.className = 'briefing-list';
+    filtered.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = formatter ? formatter(item) : String(item);
+      list.appendChild(li);
+    });
+    return list;
+  }
+
+  function renderInlineMarketBriefing(bubble, payload) {
+    const block = document.createElement('div');
+    block.className = 'briefing-block';
+
+    const playbook = payload.playbook || {};
+    const grounding = payload.source_grounding || {};
+    const workflowContext = payload.context || {};
+    const context = workflowContext.context || {};
+    const dataGaps = asArray(payload.data_gaps);
+    const warnings = asArray(payload.warnings).concat(asArray(workflowContext.warnings));
+
+    const header = document.createElement('div');
+    header.className = 'briefing-header';
+    const title = document.createElement('div');
+    title.className = 'briefing-title';
+    title.textContent = playbook.display_name || playbook.name || 'Market briefing';
+    header.appendChild(title);
+
+    const badges = document.createElement('div');
+    badges.className = 'briefing-badges';
+    if (playbook.research_only || (payload.briefing && payload.briefing.stance)) {
+      const badge = document.createElement('span');
+      badge.className = 'briefing-badge';
+      badge.textContent = payload.briefing && payload.briefing.stance ? payload.briefing.stance : 'research only';
+      badges.appendChild(badge);
+    }
+    if (playbook.name) {
+      const badge = document.createElement('span');
+      badge.className = 'briefing-chip';
+      badge.textContent = playbook.name;
+      badges.appendChild(badge);
+    }
+    if (badges.children.length > 0) header.appendChild(badges);
+    block.appendChild(header);
+
+    const sourceChips = document.createElement('div');
+    sourceChips.className = 'briefing-chips';
+    asArray(grounding.available_sources).forEach(source => {
+      const chip = document.createElement('span');
+      chip.className = 'briefing-chip available';
+      chip.textContent = `available: ${sourceLabel(source)}`;
+      sourceChips.appendChild(chip);
+    });
+    asArray(grounding.missing_optional_sources).forEach(source => {
+      const chip = document.createElement('span');
+      chip.className = 'briefing-chip missing';
+      chip.textContent = `optional: ${sourceLabel(source)}`;
+      sourceChips.appendChild(chip);
+    });
+    asArray(grounding.missing_required_sources).forEach(source => {
+      const chip = document.createElement('span');
+      chip.className = 'briefing-chip required';
+      chip.textContent = `required: ${sourceLabel(source)}`;
+      sourceChips.appendChild(chip);
+    });
+    addBriefingSection(block, 'Sources', sourceChips.children.length > 0 ? sourceChips : null);
+
+    const rates = asArray(context.rates);
+    if (rates.length > 0) {
+      const rateChips = document.createElement('div');
+      rateChips.className = 'briefing-chips';
+      rates.forEach(rate => {
+        const chip = document.createElement('span');
+        chip.className = 'briefing-chip available';
+        if (rate.error) {
+          chip.className = 'briefing-chip required';
+          chip.textContent = `${rate.base || ''}/${rate.target || ''}: unavailable`;
+        } else {
+          const pair = [rate.base, rate.target].filter(Boolean).join('/');
+          const value = typeof rate.rate === 'number' ? rate.rate.toFixed(4) : rate.rate;
+          chip.textContent = [pair, value].filter(Boolean).join(' ');
+        }
+        rateChips.appendChild(chip);
+      });
+      addBriefingSection(block, 'Spot rates', rateChips);
+    }
+
+    const fred = asArray(context.fred);
+    if (fred.length > 0) {
+      const fredChips = document.createElement('div');
+      fredChips.className = 'briefing-chips';
+      fred.forEach(series => {
+        const chip = document.createElement('span');
+        chip.className = series.error ? 'briefing-chip required' : 'briefing-chip available';
+        if (series.error) {
+          chip.textContent = `${series.series_id || series.id || 'FRED'}: unavailable`;
+        } else {
+          const name = series.series_id || series.id || series.title || 'FRED';
+          const value = series.value !== undefined ? series.value : series.latest_value;
+          const date = series.date || series.latest_date;
+          chip.textContent = [name, value, date].filter(v => v !== undefined && v !== null && v !== '').join(' ');
+        }
+        fredChips.appendChild(chip);
+      });
+      addBriefingSection(block, 'FRED', fredChips);
+    }
+
+    const news = asArray(context.news).slice(0, 3);
+    addBriefingSection(block, 'News', makeBriefingList(news, item => {
+      const title = item.title || '(no title)';
+      const source = item.source ? ` (${item.source})` : '';
+      return `${title}${source}`;
+    }));
+
+    const research = context.research || {};
+    const researchSources = asArray(research.sources || research.results || research.documents);
+    addBriefingSection(block, 'Research', makeBriefingList(researchSources.slice(0, 4), item => {
+      if (typeof item === 'string') return item;
+      return item.name || item.title || item.source || item.id || 'Research source';
+    }));
+
+    addBriefingSection(block, 'Data gaps', makeBriefingList(dataGaps, gap => {
+      if (typeof gap === 'string') return sourceLabel(gap);
+      const source = sourceLabel(gap.source || gap.name || gap.type || 'source');
+      return gap.reason ? `${source}: ${gap.reason}` : source;
+    }));
+
+    addBriefingSection(block, 'Warnings', makeBriefingList(warnings, warning => {
+      if (typeof warning === 'string') return warning;
+      return warning.message || warning.detail || JSON.stringify(warning);
+    }));
+
+    bubble.appendChild(block);
+  }
+
   function sendExample(el) {
     userInput.value = el.dataset.prompt || el.textContent;
     sendMessage(el.dataset.agentMode);
@@ -492,7 +732,7 @@
     const div = document.createElement('div');
     div.className = 'bubble ' + role;
     div.textContent = text;
-    if (data && data.type !== 'dashboard' && data.type !== 'news' && data.type !== 'insight' && data.type !== 'rag') {
+    if (data && data.type !== 'dashboard' && data.type !== 'news' && data.type !== 'insight' && data.type !== 'rag' && data.type !== 'market_briefing') {
       const block = document.createElement('div');
       block.className = 'data-block';
       block.textContent = JSON.stringify(data, null, 2);
@@ -564,7 +804,7 @@
 
         const assistantBubble = addBubble('assistant', data.reply, data.data);
         // Add Export to PDF button when structured data is present
-        if (data.data && ['dashboard', 'news', 'insight', 'rag'].includes(data.data.type)) {
+        if (data.data && ['dashboard', 'news', 'insight', 'rag', 'market_briefing'].includes(data.data.type)) {
           const btn = document.createElement('button');
           btn.className = 'export-btn';
           btn.textContent = 'Export to PDF';
@@ -577,6 +817,8 @@
           renderInlineNews(assistantBubble, data.data);
         } else if (data.data && data.data.type === 'insight') {
           renderInlineInsight(assistantBubble, data.data);
+        } else if (data.data && data.data.type === 'market_briefing') {
+          renderInlineMarketBriefing(assistantBubble, data.data);
         } else if (data.data && data.data.type === 'rag') {
           // Deduplicate sources by name
           const uniqueSources = [...new Set(data.data.sources.map(s => s.name || s))];
