@@ -5,7 +5,7 @@ metadata:
   labels:
     app: ai-market-studio-ui
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: ai-market-studio-ui
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: ai-market-studio-ui
-        image: gcr.io/gen-lang-client-0896070179/ai-market-studio-ui:v2026-05-21-workflow-prompts
+        image: gcr.io/gen-lang-client-0896070179/ai-market-studio-ui:v2026-06-15-workflow-ui-polish
         ports:
         - containerPort: 80
         env:

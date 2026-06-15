@@ -354,7 +354,7 @@
         <span class="ex-chip" data-agent-mode="workflow" data-prompt="Collect market context for EUR/USD and GBP/USD. Include spot rates, latest FX news, FRED DFF, and research context. Do not analyze or summarize yet." onclick="sendExample(this)">Workflow: collect context</span>
         <span class="ex-chip" data-agent-mode="workflow" data-prompt="Analyze the market context for EUR/USD and GBP/USD. Focus on trend and volatility only. Do not generate a full market briefing." onclick="sendExample(this)">Workflow: analyze context</span>
         <span class="ex-chip" data-agent-mode="workflow" data-prompt="Generate a market briefing for EUR/USD and GBP/USD. Include rates, latest FX news, FRED DFF, and research context. Explain the key market drivers and risks." onclick="sendExample(this)">Workflow: market briefing</span>
-        <span class="ex-chip" data-agent-mode="workflow" data-prompt="Use the financial analysis playbook for an FX carry briefing on EUR/USD. Include FRED macro rate data, explain the carry setup using spot and rate differentials, and keep it research-only." onclick="sendExample(this)">Workflow: FX carry playbook</span>
+        <span class="ex-chip" data-agent-mode="workflow" data-prompt="Generate an FX carry briefing for USD/HKD using the FX carry playbook. Include spot rates, latest FX news, FRED DFF, and research context. Explain the rate differential proxy, carry-to-vol, forward assumptions, and key risks. Keep it research-only." onclick="sendExample(this)">FX carry: USD/HKD</span>
       </div>
       <div id="chat-window"></div>
       <div id="input-area">
@@ -483,6 +483,141 @@
     } else {
       renderLineTrend(panelId, panelData, payload.base);
     }
+  }
+
+  function getWorkflowContext(payload) {
+    if (!payload) return {};
+    if (payload.type === 'market_context') return payload.context || {};
+    if (payload.type === 'market_briefing') return (payload.context && payload.context.context) || {};
+    return {};
+  }
+
+  function createChartCanvas(bubble) {
+    const panelId = 'inline-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'margin-top:12px;background:#1e2a3a;border-radius:8px;padding:12px;min-height:240px;';
+    const canvas = document.createElement('canvas');
+    canvas.id = 'canvas-' + panelId;
+    canvas.style.cssText = 'max-height:220px;';
+    wrapper.appendChild(canvas);
+    bubble.appendChild(wrapper);
+    return canvas;
+  }
+
+  function renderSpotRateBarChart(bubble, rates) {
+    const cleanRates = asArray(rates).filter(r => r && !r.error && typeof r.rate === 'number');
+    if (cleanRates.length < 2) return;
+    const canvas = createChartCanvas(bubble);
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: cleanRates.map(r => [r.base, r.target].filter(Boolean).join('/')),
+        datasets: [{
+          label: 'Spot rate',
+          data: cleanRates.map(r => r.rate),
+          backgroundColor: cleanRates.map((_, i) => COLORS[i % COLORS.length] + 'bb'),
+          borderColor: cleanRates.map((_, i) => COLORS[i % COLORS.length]),
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+          tooltip: { mode: 'index', intersect: false },
+        },
+        scales: {
+          x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: '#2d3148' } },
+          y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#2d3148' } },
+        },
+      },
+    });
+  }
+
+  function renderHistoricalTrendChart(bubble, histories) {
+    const cleanHistories = asArray(histories)
+      .map(h => ({ ...h, series: asArray(h.series).filter(p => p && typeof p.rate === 'number') }))
+      .filter(h => h.series.length > 2);
+    if (cleanHistories.length === 0) return;
+    const labels = cleanHistories[0].series.map(p => p.date);
+    const canvas = createChartCanvas(bubble);
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: cleanHistories.map((h, i) => ({
+          label: h.pair || [h.base, h.target].filter(Boolean).join('/'),
+          data: labels.map(date => {
+            const point = h.series.find(p => p.date === date);
+            return point ? point.rate : null;
+          }),
+          borderColor: COLORS[i % COLORS.length],
+          backgroundColor: COLORS_ALPHA[i % COLORS.length],
+          borderWidth: 2,
+          pointRadius: labels.length > 60 ? 0 : 2,
+          tension: 0.3,
+          fill: cleanHistories.length === 1,
+        })),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+          tooltip: { mode: 'index', intersect: false },
+        },
+        scales: {
+          x: { ticks: { color: '#64748b', maxTicksLimit: 8, font: { size: 10 } }, grid: { color: '#2d3148' } },
+          y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#2d3148' } },
+        },
+      },
+    });
+  }
+
+  function renderWorkflowCharts(bubble, payload) {
+    const context = getWorkflowContext(payload);
+    renderHistoricalTrendChart(bubble, context.historical_rates);
+    renderSpotRateBarChart(bubble, context.rates);
+  }
+
+  function renderInlineMarketContext(bubble, payload) {
+    const context = getWorkflowContext(payload);
+    const block = document.createElement('div');
+    block.className = 'insight-block';
+
+    const rates = asArray(context.rates);
+    if (rates.length > 0) {
+      const chipsRow = document.createElement('div');
+      chipsRow.className = 'insight-rates';
+      rates.forEach(r => {
+        const chip = document.createElement('div');
+        chip.className = 'insight-rate-chip';
+        if (r.error) {
+          chip.textContent = `${r.base || ''}/${r.target || ''}: unavailable`;
+          chip.style.color = '#f87171';
+        } else {
+          const label = document.createElement('span');
+          label.className = 'chip-label';
+          label.textContent = [r.base, r.target].filter(Boolean).join('/');
+          const val = document.createElement('span');
+          val.textContent = typeof r.rate === 'number' ? r.rate.toFixed(6) : r.rate;
+          chip.appendChild(label);
+          chip.appendChild(val);
+        }
+        chipsRow.appendChild(chip);
+      });
+      block.appendChild(chipsRow);
+    }
+
+    if (asArray(context.news).length > 0) {
+      renderInlineNews(block, { items: context.news });
+    }
+
+    if (block.children.length > 0) bubble.appendChild(block);
+    renderWorkflowCharts(bubble, payload);
   }
 
   function renderInlineNews(bubble, payload) {
@@ -782,8 +917,8 @@
   function addBubble(role, text, data) {
     const div = document.createElement('div');
     div.className = 'bubble ' + role;
-    div.textContent = text;
-    if (data && data.type !== 'dashboard' && data.type !== 'news' && data.type !== 'insight' && data.type !== 'rag' && data.type !== 'market_briefing') {
+    div.textContent = displayTextForBubble(text, data);
+    if (data && data.type !== 'dashboard' && data.type !== 'news' && data.type !== 'insight' && data.type !== 'rag' && data.type !== 'market_briefing' && data.type !== 'market_context') {
       const block = document.createElement('div');
       block.className = 'data-block';
       block.textContent = JSON.stringify(data, null, 2);
@@ -792,6 +927,18 @@
     chatWindow.appendChild(div);
     chatWindow.scrollTop = chatWindow.scrollHeight;
     return div;
+  }
+
+  function displayTextForBubble(text, data) {
+    if (!data || !['market_context', 'market_analysis', 'market_briefing', 'dashboard'].includes(data.type)) {
+      return text;
+    }
+    const stripped = String(text || '').replace(/```[\s\S]*?```/g, '').trim();
+    if (stripped) return stripped;
+    if (data.type === 'market_analysis') return 'Market analysis completed.';
+    if (data.type === 'market_context') return 'Market context collected.';
+    if (data.type === 'market_briefing') return 'Market briefing generated.';
+    return 'Structured chart rendered below.';
   }
 
   async function exportToPdf(btn) {
@@ -854,8 +1001,8 @@
         lastToolUsed = data.tool_used;
 
         const assistantBubble = addBubble('assistant', data.reply, data.data);
-        // Add Export to PDF button when structured data is present
-        if (data.data && ['dashboard', 'news', 'insight', 'rag', 'market_briefing'].includes(data.data.type)) {
+        // Add Export to PDF button for every assistant response.
+        if (data.reply || data.data) {
           const btn = document.createElement('button');
           btn.className = 'export-btn';
           btn.textContent = 'Export to PDF';
@@ -870,6 +1017,9 @@
           renderInlineInsight(assistantBubble, data.data);
         } else if (data.data && data.data.type === 'market_briefing') {
           renderInlineMarketBriefing(assistantBubble, data.data);
+          renderWorkflowCharts(assistantBubble, data.data);
+        } else if (data.data && data.data.type === 'market_context') {
+          renderInlineMarketContext(assistantBubble, data.data);
         } else if (data.data && data.data.type === 'rag') {
           // Deduplicate sources by name
           const uniqueSources = [...new Set(data.data.sources.map(s => s.name || s))];
