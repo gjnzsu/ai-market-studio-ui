@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: ai-market-studio-ui
-        image: gcr.io/gen-lang-client-0896070179/ai-market-studio-ui:v2026-06-15-workflow-ui-polish
+        image: gcr.io/gen-lang-client-0896070179/ai-market-studio-ui:v2026-07-01-ai-fx-studio
         ports:
         - containerPort: 80
         env:
