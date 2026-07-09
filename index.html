@@ -447,6 +447,8 @@
   const userInput  = document.getElementById('user-input');
   const sendBtn    = document.getElementById('send-btn');
   const history    = [];
+  const sessionId = getOrCreateLocalId('ai-market-studio-session-id');
+  const conversationId = randomId('conv');
   // Last successful assistant response data (used for PDF export)
   let lastReply = '';
   let lastData  = null;
@@ -460,6 +462,33 @@
     userInput.style.height = 'auto';
     userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
   });
+
+  function randomId(prefix) {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return `${prefix}-${window.crypto.randomUUID()}`;
+    }
+    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  function getOrCreateLocalId(key) {
+    const existing = localStorage.getItem(key);
+    if (existing) return existing;
+    const id = randomId('anon-user');
+    localStorage.setItem(key, id);
+    return id;
+  }
+
+  function buildClientContext() {
+    return {
+      applicationId: 'ai-market-studio',
+      projectId: 'fx-market-insight',
+      teamId: 'markets',
+      userId: sessionId,
+      sessionId,
+      conversationId,
+      environment: 'prod',
+    };
+  }
 
   function renderInlineDashboard(bubble, payload) {
     const panelId = 'inline-' + Date.now();
@@ -980,7 +1009,7 @@
     const thinking = addBubble('thinking', 'Fetching data…');
 
     try {
-      const payload = { message: msg, history };
+      const payload = { message: msg, history, clientContext: buildClientContext() };
       if (agentMode) payload.agent_mode = agentMode;
 
       const res = await fetch(`${API_BASE_URL}/api/chat`, {
